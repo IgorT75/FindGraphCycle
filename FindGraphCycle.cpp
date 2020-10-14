@@ -20,25 +20,44 @@ class CycleFinder {
 	enum State { white = 0, gray = 1, black = 2 };
 
   vector<vector<size_t>> _graph;
-  mutable vector<bool> _visited;
-	mutable map<size_t, State> _state;
+	stack<size_t> _stack;
+	vector<size_t> _path;
+	map<size_t, State> _state;
 
-	bool dfs(size_t vertex) const {
+	void buildCycle(size_t vertex) {
+		_path.clear();
+		while (!_stack.empty() && _stack.top() != vertex) {
+			_path.push_back(_stack.top());
+			_stack.pop();
+		}
+
+		_path.push_back(vertex);
+		std::reverse(_path.begin(), _path.end());
+
+		while (!_stack.empty())
+			_stack.pop();
+	}
+
+	bool dfs(size_t vertex) {
 		if (vertex >= _graph.size())
 			throw bad_exception();
 
 		_state[vertex] = gray;
-		printf("Graying vertex: %zu\n", vertex);
+		_stack.push(vertex);
+		//printf("Graying vertex: %zu\n", vertex);
 		for (size_t adjVert : _graph[vertex])
 		{
-			if (_state[adjVert] == gray)
+			if (_state[adjVert] == gray) {
+				buildCycle(adjVert);
 				return true;
+			}
 			if (_state[adjVert] == white)
 				if (dfs(adjVert))
 					return true;
 		}
+		_stack.pop();
 		_state[vertex] = black;
-		printf("Blackened vertex: %zu\n", vertex);
+		//printf("Blackened vertex: %zu\n", vertex);
 		return false;
 	}
 
@@ -46,13 +65,15 @@ class CycleFinder {
 		explicit CycleFinder(vector<vector<size_t>> graph) : _graph(std::move(graph)) { }
 		explicit CycleFinder(const vector<vector<size_t>>&& graph) : _graph(graph) { }
 
-    bool findCycle() const {
+    vector<size_t> findCycle() {
+			_path.clear(); _state.clear();
       for (size_t i = 0, n = _graph.size(); i < n; ++i) {
 				if (_state[i] == white)
 					if (dfs(i))
-						return true;
+						break;
       }
-			return false;
+
+			return _path;
     }
 };
 
@@ -68,16 +89,16 @@ int main() {
     { 1 },
     { 2, 6 },
     { 3, 6 },
-    { 4, 5 },
-    { 0 },
+    { 1, 4, 5 },
+    {  },
     { 4 },
     { 5 },
     { 0, 6 },
   };
 
   CycleFinder ts(graph);
-	const bool isCycle = ts.findCycle();
-	printf("Cycle present: %d\n", isCycle);
+	const auto cyclePath = ts.findCycle();
+	printVec(cyclePath);
 
   return 0;
 }
